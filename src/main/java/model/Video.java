@@ -14,7 +14,10 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -57,18 +60,16 @@ public class Video {
         this.path = path;
     }
     
-    public Video(String title, String author, String duration, String description, String format, String path, int reproductions, int id) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime currentDateTime = LocalDateTime.now();
+    public Video(String title, String author, String duration, String description, String format, String path, int reproductions, int id, String creationDate) {
         this.title = title;
         this.author = author;
-        this.creationDate = currentDateTime.format(formatter);
         this.duration = duration;
         this.reproductions = reproductions;
         this.description = description;
         this.format = format;
         this.path = path;
         this.id = id;
+        this.creationDate = creationDate;
     }
 
 
@@ -115,6 +116,10 @@ public class Video {
 
     public String getDescription() {
         return description;
+    }
+    
+    public String getPath() {
+        return path;
     }
 
     public void setDescription(String description) {
@@ -277,51 +282,88 @@ public class Video {
         }
     }
     
-public boolean checkVideoExistance() {
-    try (Connection connection = DriverManager.getConnection("jdbc:derby://localhost:1527/pr2", "pr2", "pr2")) {
-        String query = "SELECT * FROM videos WHERE title = ? AND author = ?";
-        try (PreparedStatement checkStatement = connection.prepareStatement(query)) {
-            checkStatement.setString(1, this.title);
-            checkStatement.setString(2, this.author);
-            try (ResultSet resultSet = checkStatement.executeQuery()) {
-                    return resultSet.next(); 
+    public boolean checkVideoExistance() {
+        try (Connection connection = DriverManager.getConnection("jdbc:derby://localhost:1527/pr2", "pr2", "pr2")) {
+            String query = "SELECT * FROM videos WHERE title = ? AND author = ?";
+            try (PreparedStatement checkStatement = connection.prepareStatement(query)) {
+                checkStatement.setString(1, this.title);
+                checkStatement.setString(2, this.author);
+                try (ResultSet resultSet = checkStatement.executeQuery()) {
+                        return resultSet.next(); 
+                }
+                catch (SQLException e) {
+                    return true;
+                }
             }
-            catch (SQLException e) {
-                return true;
-            }
+
+        } catch (SQLException e) {
+            System.out.println(e);
         }
-        
-    } catch (SQLException e) {
-        System.out.println(e);
+            return true;
     }
-        return true;
-}
+
+    public static Video getVideoByAuthor(String author) {
+        Video video = null;
+        try (Connection connection = DriverManager.getConnection("jdbc:derby://localhost:1527/pr2", "pr2", "pr2")) {
+            String query = "SELECT * FROM videos WHERE author = ?";
+            try (PreparedStatement statement = connection.prepareStatement(query)) {
+                statement.setString(1, author);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        video = new Video(
+                                resultSet.getString("title"),
+                                resultSet.getString("author"),
+                                resultSet.getString("duration"),
+                                resultSet.getString("description" ),
+                                resultSet.getString("format"),
+                                resultSet.getString("videoPath")
+                        );
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println(e);
+        }
+        return video;
+    }
     
-public static Video getVideoByAuthor(String author) {
-    Video video = null;
-    try (Connection connection = DriverManager.getConnection("jdbc:derby://localhost:1527/pr2", "pr2", "pr2")) {
-        String query = "SELECT * FROM videos WHERE author = ?";
-        try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setString(1, author);
+    public static List<Video> getVideosByFilter(String filter, String value) {
+        List<Video> videoList = new ArrayList<>();
+        
+        // List of valid filters
+        Set<String> validFilters = new HashSet<>(Arrays.asList("title", "author", "creationdate"));
+
+        if (!validFilters.contains(filter)) {
+            System.out.println("Invalid filter " + filter);
+            return videoList;
+        }
+
+        String query = "SELECT * FROM videos WHERE " + filter + " = ?";
+        try (Connection connection = DriverManager.getConnection("jdbc:derby://localhost:1527/pr2", "pr2", "pr2");
+             PreparedStatement statement = connection.prepareStatement(query)) {
+
+            statement.setString(1, value);
             try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    video = new Video(
+                while (resultSet.next()) {
+                    Video video = new Video(
                             resultSet.getString("title"),
                             resultSet.getString("author"),
                             resultSet.getString("duration"),
-                            resultSet.getString("description" ),
+                            resultSet.getString("description"),
                             resultSet.getString("format"),
-                            resultSet.getString("videoPath")
+                            resultSet.getString("videoPath"),
+                            resultSet.getInt("reproductions"),
+                            resultSet.getInt("id"),
+                            resultSet.getString("creationdate")
                     );
+                    videoList.add(video);
                 }
             }
+        } catch (SQLException e) {
+            System.out.println(e);
         }
-    } catch (SQLException e) {
-        System.out.println(e);
+        return videoList;
     }
-    return video;
-}   
     
-    
-    
+   
 }
