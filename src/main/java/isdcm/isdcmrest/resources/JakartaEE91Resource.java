@@ -27,9 +27,7 @@ public class JakartaEE91Resource {
     
     @GET
     public Response ping(){
-        return Response
-                .ok("ping Jakarta EE")
-                .build();
+        return Response.status(Response.Status.UNAUTHORIZED).build();
     }
     
 
