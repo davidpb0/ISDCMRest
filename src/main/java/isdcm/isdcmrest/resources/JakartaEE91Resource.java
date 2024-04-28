@@ -16,6 +16,14 @@ import jakarta.json.JsonReader;
 import jakarta.ws.rs.PUT;
 import java.io.StringReader;
 import java.util.List;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Date;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.Produces;
+import model.User;
 
 
 /**
@@ -24,6 +32,7 @@ import java.util.List;
  */
 @Path("jakartaee9")
 public class JakartaEE91Resource {
+    private static final String SECRET_KEY = "e2c8d7d7-31b2-4a9f-a4dc-0a7e6a4f73b9";
     
     @GET
     public Response ping(){
@@ -101,6 +110,36 @@ public class JakartaEE91Resource {
             e.printStackTrace();
             return Response.serverError().entity("Failed to update reproductions").build();
         }
+    }
+    
+    /**
+    * POST method to login in the application
+    * @param username
+    * @param password
+    * @return
+    */
+    @POST
+    @Path("login")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response Login(@FormParam("username") String username,
+    @FormParam("password") String password){
+
+         System.out.println(username);
+         System.out.println(password);
+         
+        if (User.authenticateUser(username, password)) {
+            String token = Jwts.builder()
+                   .setSubject(username)
+                   .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                   .compact();
+            // Devuelve el token como respuesta
+            return Response.ok().entity("{\"token\": \"" + token + "\"}").build();
+        }
+        return Response.status(Response.Status.UNAUTHORIZED)
+                       .entity("{\"error\": \"Authentication failed\"}")
+                       .build();
+  
     }
 }
 
